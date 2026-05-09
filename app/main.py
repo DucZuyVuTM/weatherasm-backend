@@ -1,9 +1,19 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import APP_NAME, APP_VERSION
 from app.database import create_tables
 from app.routers import auth, users, locations, weather
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    create_tables()
+    print("Tables created successfully")
+    yield
+    print("Shutting down application...")
+
 
 app = FastAPI(
     title=APP_NAME,
@@ -23,6 +33,7 @@ app = FastAPI(
     ),
     docs_url="/docs",
     redoc_url="/redoc",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -32,11 +43,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-@app.on_event("startup")
-def startup():
-    create_tables()
 
 
 @app.get("/", tags=["Health"])
