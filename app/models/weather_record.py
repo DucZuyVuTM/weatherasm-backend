@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from sqlalchemy import Column, Integer, String, Float, DateTime, JSON
+from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String
 from app.database import Base
 
 
@@ -7,10 +7,7 @@ class WeatherRecord(Base):
     __tablename__ = "weather_records"
 
     id = Column(Integer, primary_key=True, index=True)
-    city_name = Column(String, nullable=False, index=True)
-    country_code = Column(String(2), nullable=True)
-    latitude = Column(Float, nullable=False)
-    longitude = Column(Float, nullable=False)
+    location_id = Column(Integer, ForeignKey("locations.id", ondelete="CASCADE"), nullable=False)
     temperature = Column(Float, nullable=True)          # °C
     apparent_temperature = Column(Float, nullable=True) # feels like °C
     humidity = Column(Float, nullable=True)             # %
