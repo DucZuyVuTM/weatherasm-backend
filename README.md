@@ -68,6 +68,7 @@ uvicorn app.main:app --reload
 | POST | `/users/me/change-password` | Сменить пароль |
 | DELETE | `/users/me` | Удалить аккаунт |
 | GET | `/users/` | Список всех (admin) |
+| GET | `/users/{id}/` | Подробности о пользователе |
 | PATCH | `/users/{id}/deactivate` | Деактивировать (admin) |
 
 ### 📍 Сохранённые локации (`/locations`)
