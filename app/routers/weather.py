@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import List
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
@@ -15,21 +15,50 @@ from app.services.weather_fetcher import geocode_city, fetch_current_weather, fe
 from app.services.forecast_engine import (
     generate_alerts, generate_forecast_alerts, compute_statistics,
 )
+from app.models.location import Location
 
 router = APIRouter(prefix="/weather", tags=["Weather"])
 
 
+def _get_or_create_location(db: Session, data: dict) -> int:
+    """Find the location by lat/lon; if it doesn't exist, create a new one. Return the location_id."""
+    loc = db.query(Location).filter(
+        Location.latitude == data["latitude"],
+        Location.longitude == data["longitude"],
+    ).first()
+
+    if not loc:
+        loc = Location(
+            city_name=data["city_name"],
+            country_code=data["country_code"],
+            latitude=data["latitude"],
+            longitude=data["longitude"],
+        )
+        db.add(loc)
+        db.flush()
+
+    return loc.id
+
+
 def _save_record(db: Session, data: dict):
     """Persist a current-weather fetch to the history table."""
-    record = WeatherRecord(**{
-        k: v for k, v in data.items()
-        if k not in ("city_name", "country_code", "latitude", "longitude", "fetched_at")
-    })
-    record.city_name = data["city_name"]
-    record.country_code = data["country_code"]
-    record.latitude = data["latitude"]
-    record.longitude = data["longitude"]
-    record.fetched_at = data["fetched_at"]
+    location_id = _get_or_create_location(db, data)
+    record = WeatherRecord(
+        location_id=location_id,
+        temperature=data["temperature"],
+        apparent_temperature=data["apparent_temperature"],
+        humidity=data["humidity"],
+        wind_speed=data["wind_speed"],
+        wind_direction=data["wind_direction"],
+        precipitation=data["precipitation"],
+        snowfall=data["snowfall"],
+        cloud_cover=data["cloud_cover"],
+        pressure=data["pressure"],
+        weather_code=data["weather_code"],
+        weather_description=data["weather_description"],
+        is_day=data["is_day"],
+        fetched_at=data["fetched_at"],
+    )
     db.add(record)
     db.commit()
 

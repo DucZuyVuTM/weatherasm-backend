@@ -7,6 +7,7 @@ from app.core.config import (
     ALERT_WIND_SPEED_KMH, ALERT_PRECIPITATION_MM,
     ALERT_TEMP_HIGH_C, ALERT_TEMP_LOW_C, ALERT_SNOWFALL_CM,
 )
+from app.models.location import Location
 from app.models.weather_record import WeatherRecord
 from app.schemas.weather import WeatherAlert
 
@@ -120,8 +121,9 @@ def compute_statistics(db: Session, city_name: str, period_days: int) -> dict:
     since = datetime.now(timezone.utc) - timedelta(days=period_days)
     records: List[WeatherRecord] = (
         db.query(WeatherRecord)
+        .join(Location, WeatherRecord.location_id == Location.id)
         .filter(
-            WeatherRecord.city_name.ilike(city_name),
+            Location.city_name.ilike(f"%{city_name}%"),
             WeatherRecord.fetched_at >= since,
         )
         .order_by(WeatherRecord.fetched_at)
@@ -139,6 +141,8 @@ def compute_statistics(db: Session, city_name: str, period_days: int) -> dict:
             "records_count": 0,
         }
 
+    location = db.query(Location).filter(Location.id == records[0].location_id).first()
+
     temps = [r.temperature for r in records if r.temperature is not None]
     humidities = [r.humidity for r in records if r.humidity is not None]
     winds = [r.wind_speed for r in records if r.wind_speed is not None]
@@ -150,8 +154,8 @@ def compute_statistics(db: Session, city_name: str, period_days: int) -> dict:
         most_common = max(set(conditions), key=conditions.count)
 
     return {
-        "city_name": records[-1].city_name,
-        "country_code": records[-1].country_code,
+        "city_name": location.city_name if location else city_name,
+        "country_code": location.country_code if location else None,
         "period_days": period_days,
         "temp_avg": round(statistics.mean(temps), 2) if temps else None,
         "temp_max": round(max(temps), 2) if temps else None,
