@@ -1,13 +1,14 @@
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, DeclarativeBase
+from sqlalchemy.orm import sessionmaker
 from app.core.config import DATABASE_URL
+from app.infrastructure.database.models import Base
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
-class Base(DeclarativeBase):
-    pass
+def create_tables() -> None:
+    Base.metadata.create_all(bind=engine)
 
 
 def get_db():
@@ -16,8 +17,3 @@ def get_db():
         yield db
     finally:
         db.close()
-
-
-def create_tables():
-    from app.models import user, location, weather_record, forecast
-    Base.metadata.create_all(bind=engine)

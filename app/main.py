@@ -1,19 +1,17 @@
-import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.core.config import APP_NAME, APP_VERSION
-from app.database import create_tables
-from app.routers import auth, users, locations, weather
+from app.core.config import APP_NAME, APP_VERSION, PRODUCTION_ORIGIN
+from app.infrastructure.database.session import create_tables
+from app.presentation.routers import auth, users, locations, weather
+from app.presentation.exception_handlers import register_exception_handlers
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     create_tables()
-    print("Tables created successfully")
     yield
-    print("Shutting down application...")
 
 
 app = FastAPI(
@@ -37,8 +35,6 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-PRODUCTION_ORIGIN = os.getenv("PRODUCTION_ORIGIN", "http://localhost:5173")
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[PRODUCTION_ORIGIN],
@@ -46,6 +42,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+register_exception_handlers(app)
+
+app.include_router(auth.router)
+app.include_router(users.router)
+app.include_router(locations.router)
+app.include_router(weather.router)
 
 
 @app.get("/", tags=["Health"])
@@ -61,9 +64,3 @@ def root():
 @app.get("/health", tags=["Health"])
 def health():
     return {"status": "ok"}
-
-
-app.include_router(auth.router)
-app.include_router(users.router)
-app.include_router(locations.router)
-app.include_router(weather.router)
